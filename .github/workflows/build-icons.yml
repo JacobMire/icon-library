@@ -1,0 +1,28 @@
+name: Build Icons
+
+on:
+  push:
+    paths:
+      - "svg/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - run: npm install
+
+      - run: node scripts/generate-css.js
+
+      - run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add svg icons.css
+          git commit -m "auto: update icons" || echo "no changes"
+          git push
