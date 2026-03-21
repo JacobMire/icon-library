@@ -55,7 +55,7 @@ function generateCSS() {
   const files = fs.readdirSync(SVG_DIR);
 
   let css = `
-.icon {
+.ez-icon {
   display: inline-block;
   width: 1em;
   height: 1em;
@@ -73,7 +73,7 @@ function generateCSS() {
     const clean = file.replace(".svg", "").replace(/^ez-/, "");
 
     css += `
-.icon-${clean} {
+.ez-icon-${clean} {
   -webkit-mask-image: url("${CDN_BASE}/${file}");
   mask-image: url("${CDN_BASE}/${file}");
 }
