@@ -49,3 +49,8 @@
   -webkit-mask-image: url("https://cdn.jsdelivr.net/gh/YOUR_USERNAME/YOUR_REPO@main/svg/ez-Thunderstorm-Strong--Streamline-Carbon.svg");
   mask-image: url("https://cdn.jsdelivr.net/gh/YOUR_USERNAME/YOUR_REPO@main/svg/ez-Thunderstorm-Strong--Streamline-Carbon.svg");
 }
+
+.ez-icon-Workflow {
+  -webkit-mask-image: url("https://cdn.jsdelivr.net/gh/YOUR_USERNAME/YOUR_REPO@main/svg/ez-Workflow.svg");
+  mask-image: url("https://cdn.jsdelivr.net/gh/YOUR_USERNAME/YOUR_REPO@main/svg/ez-Workflow.svg");
+}
