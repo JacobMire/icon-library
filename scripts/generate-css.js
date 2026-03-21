@@ -5,7 +5,7 @@ const { optimize } = require("svgo");
 const SVG_DIR = path.join(__dirname, "../svg");
 const OUTPUT = path.join(__dirname, "../icons.css");
 
-const CDN_BASE = "https://cdn.jsdelivr.net/gh/YOUR_USERNAME/YOUR_REPO@main/svg";
+const CDN_BASE = "https://cdn.jsdelivr.net/gh/JacobMire/icon-library@main/svg";
 
 // Validate SVG
 function validateSVG(content, file) {
