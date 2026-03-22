@@ -45,6 +45,11 @@
   mask-image: url("https://cdn.jsdelivr.net/gh/JacobMire/icon-library@main/svg/ez-Kubelet--Streamline-Carbon.svg");
 }
 
+.ez-icon-Load-Balancer-Pool--Streamline-Carbon {
+  -webkit-mask-image: url("https://cdn.jsdelivr.net/gh/JacobMire/icon-library@main/svg/ez-Load-Balancer-Pool--Streamline-Carbon.svg");
+  mask-image: url("https://cdn.jsdelivr.net/gh/JacobMire/icon-library@main/svg/ez-Load-Balancer-Pool--Streamline-Carbon.svg");
+}
+
 .ez-icon-Thunderstorm--Streamline-Carbon {
   -webkit-mask-image: url("https://cdn.jsdelivr.net/gh/JacobMire/icon-library@main/svg/ez-Thunderstorm--Streamline-Carbon.svg");
   mask-image: url("https://cdn.jsdelivr.net/gh/JacobMire/icon-library@main/svg/ez-Thunderstorm--Streamline-Carbon.svg");
