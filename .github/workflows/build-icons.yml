@@ -9,7 +9,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # needed to push, tag, and create releases
+      contents: write
+      pages: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v3
@@ -20,25 +22,26 @@ jobs:
 
       - run: npm install
 
-      - run: node scripts/generate-css.js
+      # Generate a timestamped tag so SVG CDN URLs are pinned to this exact build
+      - name: Set release tag
+        run: echo "TAG=v$(date -u +'%Y%m%d%H%M%S')" >> "$GITHUB_ENV"
 
-      # Commit the updated icons.css and SVGs, then create a timestamped tag.
-      # The tag is what makes @latest on jsDelivr point to this build.
+      # Build icons.css with SVG URLs pinned to $TAG
+      - run: node scripts/generate-css.js
+        env:
+          TAG: ${{ env.TAG }}
+
+      # Commit SVGs + icons.css, then tag + release so jsDelivr can serve the pinned SVGs
       - name: Commit, tag, and push
-        id: tag_step
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add svg/ icons.css
           git commit -m "auto: build icons [skip ci]" || echo "Nothing to commit"
-          TAG="v$(date -u +'%Y%m%d%H%M%S')"
           git tag "$TAG"
           git push origin HEAD
           git push origin "$TAG"
-          echo "TAG=$TAG" >> "$GITHUB_ENV"
 
-      # Publishing a GitHub Release is what moves @latest on jsDelivr.
-      # Without this step, @latest never updates.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -46,9 +49,12 @@ jobs:
           name: "Icon build ${{ env.TAG }}"
           generate_release_notes: false
 
-      # Purge jsDelivr's edge cache for the files that changed.
-      # @latest is the only URL that matters now — no more @main.
-      - name: Purge jsDelivr cache
-        run: |
-          curl -sf "https://purge.jsdelivr.net/gh/JacobMire/icon-library@latest/icons.css" && echo "Purged icons.css"
-          curl -sf "https://purge.jsdelivr.net/gh/JacobMire/icon-library@latest/svg/" && echo "Purged svg/"
+      # Deploy icons.css to GitHub Pages — this is what your <link> tag points to.
+      # GitHub Pages serves directly from the repo with low caching; no CDN tag-resolution lag.
+      - name: Upload icons.css to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "." # serves the whole repo root (icons.css lives here)
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
