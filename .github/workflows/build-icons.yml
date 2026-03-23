@@ -23,6 +23,12 @@ jobs:
       - run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add svg icons.css
-          git commit -m "auto: update icons" || echo "no changes"
+          git add svg *.css
+          git commit -m "auto: build icons" || echo "no changes"
           git push
+
+      - name: Purge jsDelivr cache
+        run: |
+          curl "https://purge.jsdelivr.net/gh/JacobMire/icon-library@main/icons.css"
+          curl "https://purge.jsdelivr.net/gh/JacobMire/icon-library@latest/icons.css"
+          curl "https://purge.jsdelivr.net/gh/JacobMire/icon-library/icons.css"
