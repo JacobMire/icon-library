@@ -22,26 +22,26 @@ jobs:
 
       - run: npm install
 
-      # Generate a timestamped tag so SVG CDN URLs are pinned to this exact build
+      # 🟢 STEP 1 — create tag
       - name: Set release tag
         run: echo "TAG=v$(date -u +'%Y%m%d%H%M%S')" >> "$GITHUB_ENV"
 
-      # Build icons.css with SVG URLs pinned to $TAG
-      - run: node scripts/generate-css.js
-        env:
-          TAG: ${{ env.TAG }}
-
-      # Commit SVGs + icons.css, then tag + release so jsDelivr can serve the pinned SVGs
-      - name: Commit, tag, and push
+      # 🟢 STEP 2 — commit SVGs FIRST
+      - name: Commit SVGs
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add svg/ icons.css
-          git commit -m "auto: build icons [skip ci]" || echo "Nothing to commit"
-          git tag "$TAG"
+          git add svg/
+          git commit -m "auto: add svg icons [skip ci]" || echo "Nothing to commit"
           git push origin HEAD
+
+      # 🟢 STEP 3 — create + push tag
+      - name: Create and push tag
+        run: |
+          git tag "$TAG"
           git push origin "$TAG"
 
+      # 🟢 STEP 4 — create release (important for jsDelivr)
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -49,12 +49,46 @@ jobs:
           name: "Icon build ${{ env.TAG }}"
           generate_release_notes: false
 
-      # Deploy icons.css to GitHub Pages — this is what your <link> tag points to.
-      # GitHub Pages serves directly from the repo with low caching; no CDN tag-resolution lag.
+      # 🟢 STEP 5 — WAIT FOR CDN (CRITICAL)
+      - name: Wait for jsDelivr
+        run: |
+          FILE=$(ls svg | head -n 1)
+
+          echo "Checking CDN for $FILE"
+
+          for i in {1..15}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://cdn.jsdelivr.net/gh/JacobMire/icon-library@${TAG}/svg/$FILE")
+
+            if [ "$STATUS" = "200" ]; then
+              echo "CDN ready"
+              exit 0
+            fi
+
+            echo "Waiting ($i)..."
+            sleep 3
+          done
+
+          echo "CDN not fully ready, continuing anyway"
+
+      # 🟢 STEP 6 — NOW generate CSS (correct timing)
+      - name: Generate CSS
+        run: node scripts/generate-css.js
+        env:
+          TAG: ${{ env.TAG }}
+
+      # 🟢 STEP 7 — commit CSS
+      - name: Commit CSS
+        run: |
+          git add icons.css
+          git commit -m "auto: update icons.css [skip ci]" || echo "No changes"
+          git push origin HEAD
+
+      # 🟢 STEP 8 — deploy
       - name: Upload icons.css to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "." # serves the whole repo root (icons.css lives here)
+          path: "."
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
