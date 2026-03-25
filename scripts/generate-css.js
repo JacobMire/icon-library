@@ -3,7 +3,14 @@ const path = require("path");
 const { optimize } = require("svgo");
 
 const SVG_DIR = path.join(__dirname, "../svg");
-const OUTPUT_FILE = path.join(__dirname, "../icons.css");
+const HOST = process.env.HOST || "admin.eazyiot.com";
+const ORG = process.env.ORG || "";
+// Output file logic:
+let cssFileName = "icons.css";
+if (HOST !== "admin.eazyiot.com" && ORG) {
+  cssFileName = `${HOST}${ORG}icons.css`;
+}
+const OUTPUT_FILE = path.join(__dirname, "../", cssFileName);
 
 // SVGs are served from jsDelivr at a pinned tag (fast, cached forever — fine because SVGs never change)
 // icons.css is served from GitHub Pages (always fresh, no CDN tag-resolution caching)

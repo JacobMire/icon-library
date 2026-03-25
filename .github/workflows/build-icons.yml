@@ -71,17 +71,30 @@ jobs:
 
           echo "CDN not fully ready, continuing anyway"
 
-      # 🟢 STEP 6 — NOW generate CSS (correct timing)
+      # 🟢 STEP 5.5 — Extract Metadata from the trigger commit message
+      - name: Extract metadata
+        id: meta
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          HOST=$(echo "$MSG" | grep -oP '(?<=\[host:)[^\]]+' || echo 'admin.eazyiot.com')
+          ORG=$(echo "$MSG" | grep -oP '(?<=\[org:)[^\]]+' || echo '')
+          echo "HOST=$HOST" >> "$GITHUB_ENV"
+          echo "ORG=$ORG" >> "$GITHUB_ENV"
+
+      # 🟢 STEP 6 — NOW generate CSS (pass variables)
       - name: Generate CSS
         run: node scripts/generate-css.js
         env:
           TAG: ${{ env.TAG }}
+          HOST: ${{ env.HOST }}
+          ORG: ${{ env.ORG }}
 
       # 🟢 STEP 7 — commit CSS
       - name: Commit CSS
         run: |
-          git add icons.css
-          git commit -m "auto: update icons.css [skip ci]" || echo "No changes"
+          # Use *.css to capture either icons.css OR the custom named CSS
+          git add *.css
+          git commit -m "auto: update icons CSS for $HOST [skip ci]" || echo "No changes"
           git push origin HEAD
 
       # 🟢 STEP 8 — deploy
