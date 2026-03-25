@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "svg/**"
+      - "tenant_svgs/**"
 
 jobs:
   build:
@@ -22,43 +23,51 @@ jobs:
 
       - run: npm install
 
-      # 🟢 STEP 1 — create tag
+      # 🟢 STEP 1 — BUST JSDELIVR CACHE IMMEDIATELY
+      # Instead of pseudo-tags, use the RAW Git Hash (JSdelivr resolves this identically and instantly without 404 limits!)
       - name: Set release tag
-        run: echo "TAG=v$(date -u +'%Y%m%d%H%M%S')" >> "$GITHUB_ENV"
+        run: echo "TAG=${{ github.sha }}" >> "$GITHUB_ENV"
 
-      # 🟢 STEP 2 — commit SVGs FIRST
+      # 🟢 STEP 2 — Extract Metadata
+      - name: Extract metadata
+        id: meta
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          HOST=$(echo "$MSG" | grep -oP '(?<=\[host:)[^\]]+' || echo 'admin.eazyiot.com')
+          ORG=$(echo "$MSG" | grep -oP '(?<=\[org:)[^\]]+' || echo '')
+          echo "HOST=$HOST" >> "$GITHUB_ENV"
+          echo "ORG=$ORG" >> "$GITHUB_ENV"
+
+      # 🟢 STEP 3 — Commit SVGs
       - name: Commit SVGs
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add svg/
+          git add svg/ tenant_svgs/ || echo "Nothing to add"
           git commit -m "auto: add svg icons [skip ci]" || echo "Nothing to commit"
-          git push origin HEAD
+          git push origin HEAD || echo "Already pushed"
 
-      # 🟢 STEP 3 — create + push tag
-      - name: Create and push tag
-        run: |
-          git tag "$TAG"
-          git push origin "$TAG"
-
-      # 🟢 STEP 4 — create release (important for jsDelivr)
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.TAG }}
-          name: "Icon build ${{ env.TAG }}"
-          generate_release_notes: false
-
-      # 🟢 STEP 5 — WAIT FOR CDN (CRITICAL)
+      # 🟢 STEP 4 — WAIT FOR CDN (Sort by NEWEST FILE)
       - name: Wait for jsDelivr
         run: |
-          FILE=$(ls svg | head -n 1)
+          TARGET_DIR="svg"
+          if [ "$HOST" != "admin.eazyiot.com" ] && [ -n "$ORG" ]; then
+            TARGET_DIR="tenant_svgs/${HOST}${ORG}"
+          fi
 
-          echo "Checking CDN for $FILE"
+          if [ ! -d "$TARGET_DIR" ]; then 
+            echo "$TARGET_DIR missing"
+            exit 0
+          fi
+
+          # ✅ Sort dynamically by NEWEST (-t) to guarantee checking the icon JUST uploaded
+          FILE=$(ls -t "$TARGET_DIR" | head -n 1)
+
+          echo "Checking CDN for $TARGET_DIR/$FILE"
 
           for i in {1..15}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              "https://cdn.jsdelivr.net/gh/JacobMire/icon-library@${TAG}/svg/$FILE")
+              "https://cdn.jsdelivr.net/gh/JacobMire/icon-library@${TAG}/$TARGET_DIR/$FILE")
 
             if [ "$STATUS" = "200" ]; then
               echo "CDN ready"
@@ -71,17 +80,7 @@ jobs:
 
           echo "CDN not fully ready, continuing anyway"
 
-      # 🟢 STEP 5.5 — Extract Metadata from the trigger commit message
-      - name: Extract metadata
-        id: meta
-        run: |
-          MSG="${{ github.event.head_commit.message }}"
-          HOST=$(echo "$MSG" | grep -oP '(?<=\[host:)[^\]]+' || echo 'admin.eazyiot.com')
-          ORG=$(echo "$MSG" | grep -oP '(?<=\[org:)[^\]]+' || echo '')
-          echo "HOST=$HOST" >> "$GITHUB_ENV"
-          echo "ORG=$ORG" >> "$GITHUB_ENV"
-
-      # 🟢 STEP 6 — NOW generate CSS (pass variables)
+      # 🟢 STEP 5 — NOW generate CSS
       - name: Generate CSS
         run: node scripts/generate-css.js
         env:
@@ -89,15 +88,14 @@ jobs:
           HOST: ${{ env.HOST }}
           ORG: ${{ env.ORG }}
 
-      # 🟢 STEP 7 — commit CSS
+      # 🟢 STEP 6 — commit CSS
       - name: Commit CSS
         run: |
-          # Use *.css to capture either icons.css OR the custom named CSS
           git add *.css
-          git commit -m "auto: update icons CSS for $HOST [skip ci]" || echo "No changes"
+          git commit -m "auto: update icons CSS ($HOST) [skip ci]" || echo "No changes"
           git push origin HEAD
 
-      # 🟢 STEP 8 — deploy
+      # 🟢 STEP 7 — deploy
       - name: Upload icons.css to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
