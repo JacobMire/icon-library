@@ -5,6 +5,11 @@ const { optimize } = require("svgo");
 const HOST = process.env.HOST || "admin.eazyiot.com";
 const ORG = process.env.ORG || "";
 
+// Constants
+const ICON_REPO_OWNER = "JacobMire";
+const ICON_REPO_NAME = "icon-library";
+const ICON_CDN_BASE_URL = `https://cdn.jsdelivr.net/gh/${ICON_REPO_OWNER}/${ICON_REPO_NAME}`;
+
 // 1. Point dynamically to the correct isolated sub-folder
 const isTenant = HOST !== "admin.eazyiot.com" && ORG;
 const TARGET_FOLDER = isTenant ? `tenant_svgs/${HOST}${ORG}` : "svg";
@@ -24,7 +29,7 @@ if (!fs.existsSync(SVG_DIR)) {
 
 // 2. Configure JSdelivr with TARGET_FOLDER
 const TAG = process.env.TAG || "latest";
-const CDN_BASE = `https://cdn.jsdelivr.net/gh/JacobMire/icon-library@${TAG}/${TARGET_FOLDER}`;
+const CDN_BASE = `${ICON_CDN_BASE_URL}@${TAG}/${TARGET_FOLDER}`;
 
 function validateSVG(content, file) {
   if (!content.includes("<svg")) throw new Error(`${file} is not a valid SVG`);

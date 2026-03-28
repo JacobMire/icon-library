@@ -14,8 +14,14 @@ jobs:
       pages: write
       id-token: write
 
+    env:
+      ICON_REPO_OWNER: JacobMire
+      ICON_REPO_NAME: icon-library
+
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT }}
 
       - uses: actions/setup-node@v3
         with:
@@ -38,14 +44,13 @@ jobs:
           echo "HOST=$HOST" >> "$GITHUB_ENV"
           echo "ORG=$ORG" >> "$GITHUB_ENV"
 
-      # 🟢 STEP 3 — Commit SVGs
-      - name: Commit SVGs
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add svg/ tenant_svgs/ || echo "Nothing to add"
-          git commit -m "auto: add svg icons [skip ci]" || echo "Nothing to commit"
-          git push origin HEAD || echo "Already pushed"
+      # 🟢 STEP 3 — Generate CSS (and optimize Icons)
+      - name: Generate CSS
+        run: node scripts/generate-css.js
+        env:
+          TAG: ${{ env.TAG }}
+          HOST: ${{ env.HOST }}
+          ORG: ${{ env.ORG }}
 
       # 🟢 STEP 4 — WAIT FOR CDN (Sort by NEWEST FILE)
       - name: Wait for jsDelivr
@@ -67,7 +72,7 @@ jobs:
 
           for i in {1..15}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              "https://cdn.jsdelivr.net/gh/JacobMire/icon-library@${TAG}/$TARGET_DIR/$FILE")
+              "https://cdn.jsdelivr.net/gh/${{ env.ICON_REPO_OWNER }}/${{ env.ICON_REPO_NAME }}@${TAG}/$TARGET_DIR/$FILE")
 
             if [ "$STATUS" = "200" ]; then
               echo "CDN ready"
@@ -80,19 +85,13 @@ jobs:
 
           echo "CDN not fully ready, continuing anyway"
 
-      # 🟢 STEP 5 — NOW generate CSS
-      - name: Generate CSS
-        run: node scripts/generate-css.js
-        env:
-          TAG: ${{ env.TAG }}
-          HOST: ${{ env.HOST }}
-          ORG: ${{ env.ORG }}
-
-      # 🟢 STEP 6 — commit CSS
-      - name: Commit CSS
+      # 🟢 STEP 5 — Commit Changes (CSS + Optimized Icons)
+      - name: Commit Changes
         run: |
-          git add *.css
-          git commit -m "auto: update icons CSS ($HOST) [skip ci]" || echo "No changes"
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add *.css svg/ tenant_svgs/ || echo "Nothing to add"
+          git commit -m "auto: update icons and CSS ($HOST) [skip ci]" || echo "No changes"
           git push origin HEAD
 
       # 🟢 STEP 7 — deploy
